@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explorador Geológico Interactivo · U3 ByG</title>
+    <!-- Chosen Palette: Earthy & Warm -->
+    <!-- Application Structure Plan: Se ha diseñado un "Explorador Geológico" interactivo en 4 secciones. 1) Un corte transversal de la Tierra (Modelo Estático/Dinámico) donde el usuario hace clic en las capas. 2) Un diagrama animado del "Motor" (corrientes de convección). 3) El núcleo: un explorador interactivo de "Límites de Placas" (Divergente, Convergente, Transformante) que muestra sus consecuencias y potencial geotérmico. 4) Un gráfico de barras que compara el riesgo sísmico, volcánico y el potencial geotérmico de cada límite. Esta estructura transforma un informe pasivo en una herramienta de exploración activa, diseñada para ayudar al estudiante a resolver el reto del proyecto (encontrar una zona para una central geotérmica). -->
+    <!-- Visualization & Content Choices: 
+        - Capas de la Tierra (Reporte Sec 1-2) -> Goal: Inform/Organize -> Viz/Method: Diagrama de capas apiladas (HTML/CSS) con JS (clic) para mostrar/ocultar descripciones. -> Justification: Mucho más visual e interactivo que una lista de texto.
+        - Corrientes de Convección (Reporte Sec 3) -> Goal: Show Process -> Viz/Method: Diagrama de flujo circular animado (HTML/CSS keyframes). -> Justification: Muestra el movimiento que el texto solo puede describir.
+        - Límites de Placas (Reporte Sec 4) -> Goal: Compare -> Viz/Method: Pestañas interactivas (HTML/JS) que cambian el contenido de un panel. -> Justification: Permite al usuario comparar los 3 tipos de límites de forma activa y centrada, en lugar de una tabla estática.
+        - Comparativa de Límites (Datos inferidos del Reporte Sec 4-5) -> Goal: Compare -> Viz/Method: Gráfico de barras agrupadas (Chart.js) comparando "Riesgo Sísmico", "Riesgo Volcánico" y "Potencial Geotérmico" para los 3 tipos de límites. -> Justification: Sintetiza visualmente la información clave del proyecto (dónde hay más energía), lo cual no es obvio en el texto.
+        - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fAfC; color: #1e293b; }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 400px;
+            max-height: 450px;
+        }
+        .layer-btn {
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+        }
+        .layer-btn:hover, .layer-btn.active {
+            transform: scale(1.05);
+            filter: brightness(1.1);
+        }
+        .tab-btn {
+            transition: all 0.2s ease-in-out;
+        }
+        .tab-btn.active {
+            background-color: #0ea5e9; /* sky-500 */
+            color: white;
+        }
+        @keyframes convection-flow {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            50% { transform: translateY(-40px) scale(0.8); opacity: 0.8; }
+            100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        .convection-particle-1 { animation: convection-flow 4s ease-in-out infinite; }
+        .convection-particle-2 { animation: convection-flow 4s ease-in-out infinite 2s; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="max-w-6xl mx-auto p-4 sm:p-8">
+        
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-slate-800 mb-2">Explorador Geológico Interactivo</h1>
+            <p class="text-xl text-sky-600 font-bold">Unidad 3: La Energía Interna de la Tierra</p>
+            <p class="mt-4 text-slate-600 max-w-3xl mx-auto">Esta herramienta te ayudará a viajar al centro de la Tierra y entender dónde se esconde la energía que buscamos para nuestro proyecto de central geotérmica.</p>
+        </header>
+
+        <!-- Sección 1: Capas de la Tierra -->
+        <section class="mb-12">
+            <h2 class="text-3xl font-bold text-slate-800 mb-6 text-center">1. Viaje al Centro de la Tierra</h2>
+            <p class="text-center text-slate-600 mb-8 max-w-3xl mx-auto">Nuestro planeta es como una cebolla, con varias capas. Haz clic en cada capa para ver su descripción. La "Litosfera" es la capa rígida que "flota" sobre la "Astenosfera" plástica.</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Diagrama de Capas -->
+                <div id="earth-layers" class="md:col-span-1 flex flex-col justify-center gap-2">
+                    <button class="layer-btn p-4 rounded-lg shadow-sm border border-yellow-300 bg-yellow-100 text-yellow-800 font-bold" data-layer="corteza">Corteza</button>
+                    <button class="layer-btn p-4 rounded-lg shadow-sm border border-orange-300 bg-orange-100 text-orange-800 font-bold" data-layer="litosfera">Litosfera (Rígida)</button>
+                    <button class="layer-btn p-4 rounded-lg shadow-sm border border-red-300 bg-red-100 text-red-800 font-bold" data-layer="astenosfera">Astenosfera (Plástica)</button>
+                    <button class="layer-btn p-4 rounded-lg shadow-sm border border-red-400 bg-red-200 text-red-900 font-bold" data-layer="manto">Manto</button>
+                    <button class="layer-btn p-4 rounded-lg shadow-sm border border-gray-400 bg-gray-200 text-gray-800 font-bold" data-layer="nucleo-e">Núcleo Externo (Líquido)</button>
+                    <button class="layer-btn p-4 rounded-lg shadow-sm border border-gray-500 bg-gray-300 text-gray-900 font-bold" data-layer="nucleo-i">Núcleo Interno (Sólido)</button>
+                </div>
+                <!-- Panel de Detalles -->
+                <div class="md:col-span-2 bg-white p-6 rounded-lg shadow-md border border-slate-200 min-h-[300px]">
+                    <div id="layer-details">
+                        <h3 class="text-2xl font-bold text-slate-700">Selecciona una capa</h3>
+                        <p class="text-slate-500 mt-2">Haz clic en un botón de la izquierda para ver la información de esa capa.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sección 2: Motor de la Tierra -->
+        <section class="mb-12 bg-white p-8 rounded-2xl shadow-md border border-slate-200">
+            <h2 class="text-3xl font-bold text-slate-800 mb-6 text-center">2. El Motor del Planeta: Corrientes de Convección</h2>
+            <p class="text-center text-slate-600 mb-8 max-w-3xl mx-auto">¿Por qué se mueven las placas? Por el calor del núcleo. El magma caliente del manto asciende, se enfría arriba y vuelve a bajar, creando un movimiento circular (como una cinta transportadora) que arrastra las placas.</p>
+            <div class="flex justify-center items-center h-48 bg-red-50 rounded-lg overflow-hidden">
+                <div class="relative w-full h-full">
+                    <div class="absolute bottom-4 left-1/4 w-12 h-12 bg-red-500 rounded-full convection-particle-1"></div>
+                    <div class="absolute bottom-4 right-1/4 w-12 h-12 bg-red-500 rounded-full convection-particle-2"></div>
+                    <div class="absolute top-4 left-0 w-full p-2 bg-yellow-200 text-center font-bold text-yellow-800">LITOSFERA (se mueve)</div>
+                    <div class="absolute bottom-0 left-0 w-full p-2 bg-gray-700 text-center font-bold text-white">NÚCLEO (calor)</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sección 3: Límites de Placas -->
+        <section class="mb-12">
+            <h2 class="text-3xl font-bold text-slate-800 mb-6 text-center">3. Zonas Calientes: Límites de Placas</h2>
+            <p class="text-center text-slate-600 mb-8 max-w-3xl mx-auto">Cuando las placas se mueven, chocan, se separan o rozan. Estos bordes son las zonas con más energía. Selecciona un tipo de límite para ver qué ocurre y su potencial para una central geotérmica.</p>
+            <div id="tabs-container" class="flex justify-center gap-4 mb-4">
+                <button class="tab-btn px-6 py-2 font-bold rounded-full bg-slate-200 text-slate-700" data-limit="divergente">Divergente</button>
+                <button class="tab-btn px-6 py-2 font-bold rounded-full bg-slate-200 text-slate-700" data-limit="convergente">Convergente</button>
+                <button class="tab-btn px-6 py-2 font-bold rounded-full bg-slate-200 text-slate-700" data-limit="transformante">Transformante</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div id="limit-diagram" class="bg-white p-6 rounded-lg shadow-md border border-slate-200 min-h-[250px] flex items-center justify-center">
+                    <p class="text-slate-400">Selecciona un tipo de límite</p>
+                </div>
+                <div id="limit-details" class="bg-white p-6 rounded-lg shadow-md border border-slate-200 min-h-[250px]">
+                    <p class="text-slate-400">Aquí aparecerá la información...</p>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Sección 4: Gráfico Comparativo -->
+        <section class="mb-12">
+            <h2 class="text-3xl font-bold text-slate-800 mb-6 text-center">4. Resumen del Proyecto: ¿Dónde hay más energía?</h2>
+            <p class="text-center text-slate-600 mb-8 max-w-3xl mx-auto">Este gráfico compara los tres tipos de límites. Fíjate dónde es más alto el "Potencial Geotérmico". Esas son las zonas ideales para nuestro proyecto.</p>
+            <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-slate-200">
+                <div class="chart-container">
+                    <canvas id="limitsChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    
+    // --- Data ---
+    const layerData = {
+        corteza: {
+            title: "Corteza",
+            desc: "Es la capa más fina y superficial donde vivimos. Está formada por rocas sólidas. Se divide en Corteza Continental (más gruesa) y Oceánica (más fina)."
+        },
+        litosfera: {
+            title: "Litosfera",
+            desc: "Es la capa RÍGIDA exterior. Incluye la corteza y la parte superior del manto. No es una pieza única, está rota en las placas tectónicas."
+        },
+        astenosfera: {
+            title: "Astenosfera",
+            desc: "Es la capa PLÁSTICA (como plastilina caliente) que está justo debajo de la litosfera. Sus movimientos de convección arrastran las placas."
+        },
+        manto: {
+            title: "Manto",
+            desc: "La capa más gruesa del planeta. Formada por rocas muy calientes y densas (magma). La parte superior es la astenosfera."
+        },
+        "nucleo-e": {
+            title: "Núcleo Externo (Líquido)",
+            desc: "Está formado por Hierro (Fe) y Níquel (Ni) fundidos. Su movimiento giratorio crea el campo magnético que protege a la Tierra."
+        },
+        "nucleo-i": {
+            title: "Núcleo Interno (Sólido)",
+            desc: "El centro del planeta. A pesar de estar a miles de grados, la enorme presión hace que el Hierro y el Níquel sean sólidos."
+        }
+    };
+
+    const limitData = {
+        divergente: {
+            title: "Límite Divergente (Constructivo)",
+            desc: "Las placas se SEPARAN. El magma del manto sube y crea nueva corteza oceánica.",
+            diagram: '<div class="text-center text-4xl font-bold"><span class="text-orange-500">←</span> 🌋 <span class="text-orange-500">→</span></div>',
+            consecuencias: "Dorsales Oceánicas, volcanes submarinos.",
+            potencial: "ALTO. El magma está muy cerca de la superficie."
+        },
+        convergente: {
+            title: "Límite Convergente (Destructivo)",
+            desc: "Las placas CHOCAN. Una placa (la más densa) se hunde bajo la otra (subducción).",
+            diagram: '<div class="text-center text-4xl font-bold"><span class="text-red-500">→</span>💥<span class="text-red-500">←</span></div>',
+            consecuencias: "Grandes terremotos, volcanes y cordilleras (como Los Andes).",
+            potencial: "MUY ALTO. La fricción y el magma generan muchísimo calor."
+        },
+        transformante: {
+            title: "Límite Transformante (Pasivo)",
+            desc: "Las placas se ROZAN lateralmente. No se crea ni se destruye corteza.",
+            diagram: '<div class="text-center text-4xl font-bold"><span class="text-blue-500">↑</span> <span class="text-blue-500">↓</span></div>',
+            consecuencias: "Terremotos muy intensos (falla de San Andrés). No suelen generar volcanes.",
+            potencial: "BAJO. Hay fricción, pero el calor no está tan accesible."
+        }
+    };
+
+    // --- Sección 1: Capas de la Tierra ---
+    const layerButtons = document.querySelectorAll('#earth-layers .layer-btn');
+    const layerDetails = document.getElementById('layer-details');
+    
+    layerButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            layerButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            const layerId = btn.dataset.layer;
+            const data = layerData[layerId];
+            
+            layerDetails.innerHTML = `
+                <h3 class="text-2xl font-bold text-slate-700">${data.title}</h3>
+                <p class="text-slate-600 mt-2 text-lg">${data.desc}</p>
+            `;
+        });
+    });
+
+    // --- Sección 3: Límites de Placas ---
+    const tabButtons = document.querySelectorAll('#tabs-container .tab-btn');
+    const limitDiagram = document.getElementById('limit-diagram');
+    const limitDetails = document.getElementById('limit-details');
+
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            const limitId = btn.dataset.limit;
+            const data = limitData[limitId];
+
+            limitDiagram.innerHTML = data.diagram;
+            limitDetails.innerHTML = `
+                <h3 class="text-2xl font-bold text-slate-700">${data.title}</h3>
+                <p class="text-slate-600 mt-2 text-lg">${data.desc}</p>
+                <h4 class="font-bold text-slate-700 mt-4">Consecuencias:</h4>
+                <p class="text-slate-600">${data.consecuencias}</p>
+                <h4 class="font-bold text-slate-700 mt-4">Potencial Geotérmico:</h4>
+                <p class="font-bold text-xl ${data.potencial.includes('ALTO') ? 'text-green-600' : 'text-red-600'}">${data.potencial}</p>
+            `;
+        });
+    });
+    
+    // --- Sección 4: Gráfico Comparativo ---
+    const ctx = document.getElementById('limitsChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Divergente', 'Convergente', 'Transformante'],
+            datasets: [
+                {
+                    label: 'Riesgo Sísmico (1-10)',
+                    data: [5, 9, 10],
+                    backgroundColor: 'rgba(239, 68, 68, 0.7)', // red-500
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Riesgo Volcánico (1-10)',
+                    data: [8, 10, 1],
+                    backgroundColor: 'rgba(249, 115, 22, 0.7)', // orange-500
+                    borderColor: 'rgba(249, 115, 22, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Potencial Geotérmico (1-10)',
+                    data: [9, 10, 2],
+                    backgroundColor: 'rgba(22, 163, 74, 0.7)', // green-600
+                    borderColor: 'rgba(22, 163, 74, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 10,
+                    title: { display: true, text: 'Valoración (de 1 a 10)' }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        title: (tooltipItems) => tooltipItems[0].label
+                    }
+                }
+            }
+        }
+    });
+
+});
+</script>
+
+</body>
+</html>
